@@ -1,16 +1,25 @@
 import os
 import tkinter as tk
 from tkinter import messagebox, Scrollbar, ttk
-import win32clipboard
-from win32con import CF_HDROP
 import struct
 import tempfile
 import shutil
 import subprocess
 import sys
 
+# Importações específicas do Windows (só carrega se estiver no Windows)
+if sys.platform == "win32":
+    import win32clipboard
+    from win32con import CF_HDROP
+
 # ======= CONFIGURAÇÕES =======
-PASTA_DWGS = r"C:\Projetos Solturi\assinatura\CONTROLE"  # <-- caminho da pasta
+# Determina o caminho da pasta CONTROLE relativo ao script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PASTA_DWGS = os.path.join(os.path.dirname(SCRIPT_DIR), "CONTROLE")
+
+# Fallback para Windows se o caminho acima não existir
+if not os.path.exists(PASTA_DWGS):
+    PASTA_DWGS = r"C:\Projetos Solturi\assinatura\CONTROLE"
 # =============================
 
 def identificar_tipo(nome_arquivo):
@@ -77,22 +86,34 @@ def copiar_para_clipboard(event=None):
         # Copiar o arquivo para a pasta temporária com novo nome
         shutil.copy2(caminho_arquivo, destino)
 
-        # Preparar dados para a área de transferência no formato CF_HDROP
-        arquivos_str = destino + '\0'  # separador único
-        arquivos_bytes = arquivos_str.encode('utf-16le') + b'\0\0'  # terminador duplo
+        if sys.platform == "win32":
+            # Windows: usar win32clipboard
+            # Preparar dados para a área de transferência no formato CF_HDROP
+            arquivos_str = destino + '\0'  # separador único
+            arquivos_bytes = arquivos_str.encode('utf-16le') + b'\0\0'  # terminador duplo
 
-        # Estrutura DROPFILES
-        dropfiles_struct = struct.pack("IiiII", 20, 0, 0, 0, 1)
+            # Estrutura DROPFILES
+            dropfiles_struct = struct.pack("IiiII", 20, 0, 0, 0, 1)
 
-        data = dropfiles_struct + arquivos_bytes
+            data = dropfiles_struct + arquivos_bytes
 
-        win32clipboard.OpenClipboard()
-        win32clipboard.EmptyClipboard()
-        win32clipboard.SetClipboardData(CF_HDROP, data)
-        win32clipboard.CloseClipboard()
-
-        # Mostrar status discreto em vez do popup
-        mostrar_status("✓ Arquivo copiado como PROJETO.dwg")
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(CF_HDROP, data)
+            win32clipboard.CloseClipboard()
+            
+            mostrar_status("✓ Arquivo copiado como PROJETO.dwg")
+        else:
+            # Linux: copiar o caminho para a área de transferência usando xclip
+            try:
+                # Tenta usar xclip para copiar o caminho do arquivo
+                process = subprocess.Popen(['xclip', '-selection', 'clipboard'], 
+                                          stdin=subprocess.PIPE)
+                process.communicate(destino.encode('utf-8'))
+                mostrar_status(f"✓ Arquivo copiado para {destino}")
+            except FileNotFoundError:
+                # Se xclip não estiver instalado, apenas mostrar o caminho
+                mostrar_status(f"✓ Copiado para: {destino}", "blue")
         
     except Exception as e:
         mostrar_status(f"✗ Erro ao copiar: {str(e)[:50]}...", "red")
