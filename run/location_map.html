@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📍 Gerador de Mapa de Localização</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <!-- Adicionando proj4js para conversão UTM -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .coordinate-input {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .input-field {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 350px;
+            text-align: center;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #000;
+        }
+        
+        .current-coords {
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #495057;
+            margin-top: 10px;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .info {
+            padding: 15px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            margin: 10px 20px;
+            font-size: 14px;
+        }
+        
+        .marker-popup {
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .leaflet-popup-content {
+            margin: 12px 16px !important;
+            min-width: 220px;
+        }
+        
+        .utm-info {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #aaa;
+            font-size: 13px;
+            color: #555;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        .compass {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .compass:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+        
+        .compass-needle {
+            width: 60px;
+            height: 60px;
+            background: conic-gradient(from 0deg, #ff4444 0deg 10deg, #ffffff 10deg 170deg, #333333 170deg 190deg, #ffffff 190deg 350deg, #ff4444 350deg 360deg);
+            border-radius: 50%;
+            position: relative;
+            transition: transform 0.5s ease;
+            border: 1px solid #333;
+        }
+        
+        .compass-needle::before {
+            content: 'N';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 12px;
+            color: #ff4444;
+        }
+        
+        .compass-needle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .north-indicator {
+            position: absolute;
+            top: 80px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #333;
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .north-indicator:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .map-container {
+            position: relative;
+        }
+        
+        .format-help {
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Gerador de Mapa de Localização</h1>
+            <p>Insira coordenadas no formato DMS e gere mapas com nomes das ruas</p>
+        </div>
+        
+        <div class="coordinate-input">
+            <div class="input-group">
+                <input type="text" id="coordInput" class="input-field" placeholder='Ex: 12°45\'11.7"S 56°22\'34.1"W' value=''>
+                <button class="btn" onclick="updateLocation()">🎯 Atualizar Localização</button>
+            </div>
+            <div class="format-help">
+                💡 Formato: DD°MM'SS.S"H DD°MM'SS.S"H (Ex: 12°45'11.7"S 56°22'34.1"W)
+            </div>
+            <div class="current-coords" id="currentCoords">
+                📍 Insira as coordenadas acima
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <!-- Bússola -->
+            <div class="compass" id="compass" onclick="resetMapRotation()" title="Clique para resetar orientação">
+                <div class="compass-needle" id="compassNeedle"></div>
+            </div>
+            
+            <!-- Indicador Norte -->
+            <div class="north-indicator" id="northIndicator">
+                <span id="bearingText">N 0°</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="traceRoute()">🛣️ Traçar Rota</button>
+            <button class="btn" onclick="recenterMap()">🎯 Centralizar</button>
+            <button class="btn" onclick="changeView()">🗺️ Alterar Vista</button>
+            <button class="btn btn-warning" onclick="captureScreen()">📸 Capturar Tela</button>
+            <button class="btn btn-success" onclick="copyToClipboard()">📋 Copiar para Área de Transferência</button>
+        </div>
+        
+        <div class="info">
+            <strong>🚀 Como usar:</strong><br>
+            1. <strong>Insira as coordenadas</strong> no formato DMS (Ex: 12°45'11.7"S 56°22'34.1"W)<br>
+            2. <strong>Clique "Atualizar Localização"</strong> para centralizar o mapa<br>
+            3. <strong>Ajuste a visualização</strong> com os botões de controle<br>
+            4. <strong>Copie para área de transferência</strong> usando o botão verde ou use captura manual
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        // Configurar projeções UTM
+        proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+
+        // Variáveis globais
+        let map, marker;
+        let currentLat = null;
+        let currentLng = null;
+        let mapBearing = 0; // Orientação atual do mapa
+        let currentUTMZone = '';
+        
+        // Camadas de mapa disponíveis
+        const layers = {
+            streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri, Maxar, GeoEye, Earthstar Geographics, CNES/Airbus DS'
+            }),
+            hybrid: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri, Maxar, GeoEye'
+            })
+        };
+        
+        let currentLayer = 'streets';
+        
+        // Função para converter Lat/Long para UTM
+        function latLngToUTM(lat, lng) {
+            try {
+                // Calcular a zona UTM (fórmula padrão)
+                const zone = Math.floor((lng + 180) / 6) + 1;
+                const hemisphere = lat >= 0 ? 'N' : 'S';
+                
+                // Definir a projeção UTM dinamicamente
+                const projCode = `EPSG:${zone}${hemisphere === 'S' ? '7' : '6'}${zone}`;
+                proj4.defs(projCode, `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`);
+                
+                // Converter coordenadas
+                const converted = proj4("WGS84", projCode, [lng, lat]);
+                
+                return {
+                    easting: converted[0].toFixed(2),
+                    northing: converted[1].toFixed(2),
+                    zone: zone,
+                    hemisphere: hemisphere,
+                    fullZone: `21L`
+                };
+            } catch (error) {
+                console.error("Erro na conversão para UTM:", error);
+                return null;
+            }
+        }
+
+        // Inicializar o mapa
+        function initMap() {
+            // Centralizar no Brasil inicialmente
+            map = L.map('map').setView([-15.7801, -47.9292], 4);
+            layers.streets.addTo(map);
+            
+            // Controle de escala
+            L.control.scale({
+                metric: true,
+                imperial: false,
+                position: 'bottomleft'
+            }).addTo(map);
+            
+            // Inicializar bússola
+            initCompass();
+            
+            // Event listeners para orientação
+            map.on('rotate', updateCompass);
+            map.on('moveend', updateCompass);
+            map.on('zoomend', updateCompass);
+            
+            // Garantir renderização
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+        
+        // Criar marcador personalizado
+        function createCustomIcon() {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `
+                    <div style="
+                        background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50% 50% 50% 0;
+                        border: 3px solid white;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                        transform: rotate(-45deg);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <div style="
+                            width: 12px;
+                            height: 12px;
+                            background: white;
+                            border-radius: 50%;
+                            transform: rotate(45deg);
+                        "></div>
+                    </div>
+                `,
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+        }
+        
+        // Atualizar marcador
+        function updateMarker() {
+    // Remover marcador existente
+    if (marker) map.removeLayer(marker);
+    
+    // Adicionar novo marcador
+    marker = L.marker([currentLat, currentLng], { 
+        icon: createCustomIcon(),
+        title: 'Localização selecionada'
+    }).addTo(map);
+    
+    // Obter informações UTM
+    const utm = latLngToUTM(currentLat, currentLng);
+    if (utm) {
+        currentUTMZone = utm.fullZone;
+    }
+    
+    // Converter para DMS
+    const dmsLat = decimalToDMS(currentLat, 'lat');
+    const dmsLng = decimalToDMS(currentLng, 'lng');
+    
+    // Criar conteúdo do popup
+    const popupContent = `
+    <div class="marker-popup" style="
+        text-align: center;
+        font-family: Arial, sans-serif;
+        min-width: 200px;
+        padding: 8px;
+    ">
+        <div style="
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#e74c3c">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            Localização
+        </div>
+        
+        <!-- Coordenadas DMS -->
+        <div style="
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        ">
+            <div style="
+                font-size: 14px;
+                font-family: 'Courier New', monospace;
+                line-height: 1.4;
+            ">
+                ${dmsLat}<br>${dmsLng}
+            </div>
+        </div>
+        
+        <!-- Coordenadas UTM -->
+        ${utm ? `
+        <div style="
+            background: #e8f4f8;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        ">
+            <div style="
+                font-size: 13px;
+                color: #2980b9;
+                margin-bottom: 4px;
+                font-weight: bold;
+            ">
+                UTM ${currentUTMZone}
+            </div>
+            <div style="
+                font-size: 14px;
+                font-family: 'Courier New', monospace;
+            ">
+                <div>E: ${utm.easting} m</div>
+                <div>S: ${utm.northing} m</div>
+            </div>
+        </div>
+        ` : ''}
+    </div>
+    `;
+    
+    // Configurar o popup
+    marker.bindPopup(popupContent, {
+        minWidth: 220,
+        className: 'custom-popup'
+    }).openPopup();
+}
+        
+        // Converter decimal para DMS
+        function decimalToDMS(decimal, type) {
+            const absolute = Math.abs(decimal);
+            const degrees = Math.floor(absolute);
+            const minutes = Math.floor((absolute - degrees) * 60);
+            const seconds = ((absolute - degrees - minutes/60) * 3600).toFixed(1);
+            
+            let direction;
+            if (type === 'lat') {
+                direction = decimal >= 0 ? 'N' : 'S';
+            } else {
+                direction = decimal >= 0 ? 'E' : 'W';
+            }
+            
+            return `${degrees}°${minutes}'${seconds}"${direction}`;
+        }
+        
+        // Função para parsing do formato DMS completo
+        function parseDMSCoordinates(input) {
+            // Limpar e normalizar entrada
+            input = input.trim().replace(/'/g, "'").replace(/"/g, '"');
+            
+            // Regex para capturar coordenadas DMS completas
+            // Formato: 12°45'11.7"S 56°22'34.1"W
+            const dmsRegex = /(\d+)°(\d+)'([\d.]+)"([NSEW])\s+(\d+)°(\d+)'([\d.]+)"([NSEW])/i;
+            const match = input.match(dmsRegex);
+            
+            if (!match) {
+                return null;
+            }
+            
+            // Primeira coordenada
+            const deg1 = parseInt(match[1]);
+            const min1 = parseInt(match[2]);
+            const sec1 = parseFloat(match[3]);
+            const dir1 = match[4].toUpperCase();
+            
+            // Segunda coordenada
+            const deg2 = parseInt(match[5]);
+            const min2 = parseInt(match[6]);
+            const sec2 = parseFloat(match[7]);
+            const dir2 = match[8].toUpperCase();
+            
+            // Converter para decimal
+            let coord1 = deg1 + min1/60 + sec1/3600;
+            let coord2 = deg2 + min2/60 + sec2/3600;
+            
+            // Aplicar direção
+            if (dir1 === 'S' || dir1 === 'W') coord1 = -coord1;
+            if (dir2 === 'S' || dir2 === 'W') coord2 = -coord2;
+            
+            // Determinar qual é lat e qual é lng baseado na direção
+            let lat, lng;
+            if (dir1 === 'N' || dir1 === 'S') {
+                lat = coord1;
+                lng = coord2;
+            } else {
+                lat = coord2;
+                lng = coord1;
+            }
+            
+            return { lat, lng };
+        }
+        
+        // Atualizar localização
+        function updateLocation() {
+            const coordInput = document.getElementById('coordInput').value;
+            
+            const coords = parseDMSCoordinates(coordInput);
+            
+            if (!coords) {
+                showNotification('❌ Formato inválido! Use: DD°MM\'SS.S"H DD°MM\'SS.S"H', 'error');
+                return;
+            }
+            
+            if (coords.lat < -90 || coords.lat > 90) {
+                showNotification('❌ Latitude deve estar entre -90 e 90!', 'error');
+                return;
+            }
+            
+            if (coords.lng < -180 || coords.lng > 180) {
+                showNotification('❌ Longitude deve estar entre -180 e 180!', 'error');
+                return;
+            }
+            
+            currentLat = coords.lat;
+            currentLng = coords.lng;
+            
+            // Atualizar display das coordenadas
+            const dmsLat = decimalToDMS(currentLat, 'lat');
+            const dmsLng = decimalToDMS(currentLng, 'lng');
+            const coordDisplay = `${dmsLat} ${dmsLng}`;
+            
+            document.getElementById('currentCoords').textContent = `📍 Atual: ${coordDisplay}`;
+            
+            // Atualizar input com formato padronizado
+            document.getElementById('coordInput').value = coordDisplay;
+            
+            // Centralizar mapa e atualizar marcador
+            map.setView([currentLat, currentLng], 18);
+            updateMarker();
+            
+            showNotification('✅ Localização atualizada com sucesso!', 'success');
+        }
+        
+        // Centralizar mapa
+        function recenterMap() {
+            if (currentLat && currentLng) {
+                map.setView([currentLat, currentLng], 18);
+                marker.openPopup();
+            } else {
+                showNotification('❌ Insira coordenadas primeiro!', 'error');
+            }
+        }
+        
+        // Alterar visualização
+        function changeView() {
+            const layerNames = Object.keys(layers);
+            const currentIndex = layerNames.indexOf(currentLayer);
+            const nextIndex = (currentIndex + 1) % layerNames.length;
+            const nextLayer = layerNames[nextIndex];
+            
+            map.removeLayer(layers[currentLayer]);
+            layers[nextLayer].addTo(map);
+            currentLayer = nextLayer;
+            
+            const names = {
+                streets: 'Ruas e Nomes',
+                satellite: 'Satélite',
+                hybrid: 'Híbrido'
+            };
+            
+            showNotification(`🗺️ Visualização: ${names[nextLayer]}`, 'success');
+        }
+        
+        // Inicializar bússola
+        function initCompass() {
+            updateCompass();
+        }
+        
+        // Atualizar bússola
+        function updateCompass() {
+            const compassNeedle = document.getElementById('compassNeedle');
+            if (compassNeedle) {
+                compassNeedle.style.transform = `rotate(${mapBearing}deg)`;
+            }
+        }
+        
+        // Resetar rotação do mapa
+        function resetMapRotation() {
+            mapBearing = 0;
+            map.setBearing(mapBearing);
+            updateCompass();
+            showNotification('🧭 Orientação do mapa resetada', 'success');
+        }
+        
+        // Capturar tela
+        function captureScreen() {
+            const instructions = `📸 CAPTURA DE TELA:
+
+🖥️ WINDOWS:
+• Windows + Shift + S (Área selecionada)
+• Print Screen (Tela inteira)  
+• Alt + Print Screen (Janela ativa)
+
+🍎 MAC:
+• Cmd + Shift + 4 (Área selecionada)
+• Cmd + Shift + 3 (Tela inteira)
+• Cmd + Shift + 5 (Opções avançadas)
+
+🌐 NAVEGADOR:
+• F12 → Mais ferramentas → Capturar screenshot
+• Ctrl + P → Salvar como PDF
+
+💡 DICA: Use Ctrl/Cmd + para zoom antes da captura!`;
+            
+            alert(instructions);
+        }
+        
+        // Copiar para área de transferência
+        function copyToClipboard() {
+            showNotification('📷 Capturando mapa...', 'success');
+            
+            // Usar html2canvas para capturar o mapa
+            html2canvas(document.getElementById('map'), {
+                useCORS: true,
+                allowTaint: true,
+                scale: 2,
+                width: document.getElementById('map').offsetWidth,
+                height: document.getElementById('map').offsetHeight
+            }).then(canvas => {
+                // Converter canvas para blob
+                canvas.toBlob(blob => {
+                    // Verificar se o navegador suporta clipboard API
+                    if (navigator.clipboard && window.ClipboardItem) {
+                        // Copiar imagem para área de transferência
+                        navigator.clipboard.write([
+                            new ClipboardItem({
+                                'image/png': blob
+                            })
+                        ]).then(() => {
+                            showNotification('✅ Mapa copiado para área de transferência!', 'success');
+                        }).catch(error => {
+                            console.error('Erro ao copiar:', error);
+                            // Fallback: criar link de download
+                            fallbackDownload(canvas);
+                        });
+                    } else {
+                        // Fallback para navegadores mais antigos
+                        fallbackDownload(canvas);
+                    }
+                }, 'image/png');
+            }).catch(error => {
+                console.error('Erro ao capturar mapa:', error);
+                showNotification('❌ Erro ao capturar. Use captura de tela manual.', 'error');
+            });
+        }
+        
+        // Fallback para download
+        function fallbackDownload(canvas) {
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `mapa-${timestamp}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            showNotification('⬇️ Imagem baixada (clipboard não suportado)', 'success');
+        }
+        
+        // Mostrar notificação
+        function showNotification(message, type, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, duration);
+        }
+        
+
+        
+    // Variável para armazenar a rota
+    let routeLayer = null;
+    
+    // Função para traçar rota entre dois pontos
+    function traceRoute() {
+        // Verificar se já temos uma localização atual
+        if (!currentLat || !currentLng) {
+            showNotification('❌ Defina um ponto inicial primeiro!', 'error');
+            return;
+        }
+        
+        // Pedir coordenadas do destino
+        const destination = prompt('Digite as coordenadas do destino no formato DMS (ex: 12°45\'11.7"S 56°22\'34.1"W):');
+        
+        if (!destination) return;
+        
+        // Parse das coordenadas
+        const destCoords = parseDMSCoordinates(destination);
+        
+        if (!destCoords) {
+            showNotification('❌ Formato inválido! Use: DD°MM\'SS.S"H DD°MM\'SS.S"H', 'error');
+            return;
+        }
+        
+        // Remover rota existente
+        if (routeLayer) map.removeLayer(routeLayer);
+        
+        // Criar linha entre os pontos
+        routeLayer = L.polyline(
+            [[currentLat, currentLng], [destCoords.lat, destCoords.lng]],
+            {
+                color: '#3498db',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10',
+                lineJoin: 'round'
+            }
+        ).addTo(map);
+        
+        // Adicionar marcador no destino
+        const destMarker = L.marker([destCoords.lat, destCoords.lng], {
+            icon: createCustomIcon('#2ecc71'), // Verde para destino
+            title: 'Destino'
+        }).addTo(map);
+        
+        // Calcular distância
+        const distance = calculateDistance(currentLat, currentLng, destCoords.lat, destCoords.lng);
+        
+        // Configurar popup
+        destMarker.bindPopup(`
+            <div style="text-align: center; font-family: Arial, sans-serif; min-width: 200px;">
+                <div style="font-weight: bold; color: #2ecc71; margin-bottom: 8px;">
+                    🏁 Ponto de Destino
+                </div>
+                <div style="margin-bottom: 8px;">
+                    ${decimalToDMS(destCoords.lat, 'lat')}<br>
+                    ${decimalToDMS(destCoords.lng, 'lng')}
+                </div>
+                <div style="background: #f8f9fa; padding: 6px; border-radius: 4px;">
+                    Distância: ${distance.toFixed(2)} km
+                </div>
+            </div>
+        `).openPopup();
+        
+        // Ajustar visualização para mostrar ambos pontos
+        const bounds = L.latLngBounds(
+            [currentLat, currentLng],
+            [destCoords.lat, destCoords.lng]
+        );
+        map.fitBounds(bounds, { padding: [50, 50] });
+        
+        showNotification('🛣️ Rota traçada com sucesso!', 'success');
+    }
+    
+    // Função para calcular distância em km (fórmula haversine)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Raio da Terra em km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    // Atualizar a função createCustomIcon para aceitar cor personalizada
+    function createCustomIcon(color = '#ff6b6b') {
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div style="
+                    background: linear-gradient(135deg, ${color}, ${darkenColor(color, 20)});
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50% 50% 50% 0;
+                    border: 3px solid white;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                    transform: rotate(-45deg);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <div style="
+                        width: 12px;
+                        height: 12px;
+                        background: white;
+                        border-radius: 50%;
+                        transform: rotate(45deg);
+                    "></div>
+                </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+    }
+    
+    // Função auxiliar para escurecer cor
+    function darkenColor(color, percent) {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) - amt;
+        const G = (num >> 8 & 0x00FF) - amt;
+        const B = (num & 0x0000FF) - amt;
+        return "#" + (
+            0x1000000 +
+            (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+            (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+            (B < 255 ? (B < 1 ? 0 : B) : 255)
+        ).toString(16).slice(1);
+    }
+
+
+        // Inicializar quando a página carregar
+        window.onload = function() {
+            initMap();
+            
+            // Permitir Enter no campo de input
+            document.getElementById('coordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') updateLocation();
+            });
+        };
+    </script>
+</body>
+</html>

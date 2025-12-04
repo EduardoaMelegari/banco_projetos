@@ -1,0 +1,47 @@
+{
+  "signature_file": "assinatura.png",
+  "markers": [
+    "Assinatura do Projetista",
+    "Assinatura do Responsável"
+  ],
+  "width": 120,
+  "height": 40,
+  "output_dir": "C:\\Users\\engen\\Desktop",
+  "sign_without_markers": true,
+  "margin_left": 20,
+  "margin_bottom": 60,
+  "only_last_page": false,
+  "assinatura_img": "assinatura.png",
+  "marcadores": [
+    "Assinatura do Projetista",
+    "Assinatura do Responsável"
+  ],
+  "largura_assinatura": 120,
+  "altura_assinatura": 40,
+  "saida_diretorio": "C:\\Users\\engen\\OneDrive\\Área de Trabalho",
+  "posicionamento_paginas": {
+    "4": {
+      "offset_y": 50,
+      "direcao": "baixo"
+    },
+    "5": {
+      "offset_y": -10,
+      "direcao": "cima"
+    },
+    "6": {
+      "offset_y": -10,
+      "direcao": "cima"
+    },
+    "7": {
+      "x": 375,
+      "y": 378,
+      "force_sign": true
+    }
+  },
+  "assinar_sem_marcador": true,
+  "posicao_sem_marcador": {
+    "margem_esquerda": 20,
+    "margem_inferior": 40,
+    "apenas_ultima_pagina": false
+  }
+}
