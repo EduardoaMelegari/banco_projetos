@@ -450,12 +450,22 @@ class BuscaDWG:
             
             if info_arquivo and info_arquivo.get('firebase', False):
                 # Baixar do Firebase se necessário
-                self.mostrar_status("⬇️ Baixando de Firebase...", "blue")
+                self.mostrar_status("🔍 Verificando arquivo...", "blue")
                 
-                caminho_local = self.firebase_sync.download_file(info_arquivo['caminho_remoto'])
-                if not caminho_local:
-                    self.mostrar_status("✗ Erro ao baixar arquivo", "red")
+                result = self.firebase_sync.download_file(info_arquivo['caminho_remoto'])
+                if not result:
+                    self.mostrar_status("✗ Erro ao obter arquivo", "red")
                     return
+                
+                # download_file agora retorna tupla (path, status)
+                if isinstance(result, tuple):
+                    caminho_local, status = result
+                    if status == 'cached':
+                        self.mostrar_status("✓ Usando cache local", "green")
+                    else:
+                        self.mostrar_status("✓ Arquivo baixado", "green")
+                else:
+                    caminho_local = result
                 
                 caminho_arquivo = caminho_local
             else:

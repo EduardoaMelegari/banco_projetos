@@ -26,6 +26,7 @@ python build_exe.py
 ```
 
 O script irá:
+
 - ✅ Limpar builds anteriores
 - 🔨 Compilar a aplicação com PyInstaller
 - 📦 Criar pasta `BancoProjetosDWG_Portable/`
@@ -83,14 +84,14 @@ pyinstaller --name=BancoProjetosDWG ^
 
 ### Opções úteis
 
-| Opção | Descrição |
-|-------|-----------|
-| `--onefile` | Gera um único .exe |
-| `--onedir` | Gera pasta com .exe + DLLs (mais rápido) |
-| `--windowed` | Sem console (apenas GUI) |
-| `--console` | Com console (útil para debug) |
-| `--icon=icon.ico` | Adiciona ícone personalizado |
-| `--name=Nome` | Nome do executável |
+| Opção             | Descrição                                |
+| ----------------- | ---------------------------------------- |
+| `--onefile`       | Gera um único .exe                       |
+| `--onedir`        | Gera pasta com .exe + DLLs (mais rápido) |
+| `--windowed`      | Sem console (apenas GUI)                 |
+| `--console`       | Com console (útil para debug)            |
+| `--icon=icon.ico` | Adiciona ícone personalizado             |
+| `--name=Nome`     | Nome do executável                       |
 
 ### Adicionar ícone
 
@@ -112,6 +113,7 @@ pip install pyinstaller
 ### ❌ Executável muito grande
 
 Use `--onedir` em vez de `--onefile`:
+
 - Gera pasta com múltiplos arquivos
 - Executável menor (~5 MB)
 - Inicialização mais rápida
@@ -125,6 +127,7 @@ Use `--onedir` em vez de `--onefile`:
 ### ❌ Erro ao executar o .exe
 
 Execute pelo CMD para ver erros:
+
 ```bash
 cd BancoProjetosDWG_Portable
 BancoProjetosDWG.exe
@@ -133,16 +136,17 @@ BancoProjetosDWG.exe
 ### ❌ Módulo não encontrado
 
 Adicione ao `build_exe.py`:
+
 ```python
 '--hidden-import=nome_do_modulo',
 ```
 
 ## 📊 Comparação de Modos
 
-| Modo | Tamanho | Velocidade | Arquivos |
-|------|---------|------------|----------|
-| `--onefile` | ~40 MB | Mais lento | 1 arquivo |
-| `--onedir` | ~80 MB | Mais rápido | Pasta com vários |
+| Modo        | Tamanho | Velocidade  | Arquivos         |
+| ----------- | ------- | ----------- | ---------------- |
+| `--onefile` | ~40 MB  | Mais lento  | 1 arquivo        |
+| `--onedir`  | ~80 MB  | Mais rápido | Pasta com vários |
 
 **Recomendação:** `--onefile` para distribuição fácil.
 
@@ -175,6 +179,7 @@ BancoProjetosDWG_v1.0.zip
 ### Opção 2: Instalador (opcional)
 
 Use ferramentas como:
+
 - **Inno Setup** (gratuito)
 - **NSIS** (gratuito)
 - **Advanced Installer** (pago)

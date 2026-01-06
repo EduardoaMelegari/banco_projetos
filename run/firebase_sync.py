@@ -139,16 +139,17 @@ class FirebaseSync:
             print(f"❌ Erro ao listar arquivos: {e}")
             return []
     
-    def download_file(self, remote_path: str, force: bool = False) -> Optional[str]:
+    def download_file(self, remote_path: str, force: bool = False, verbose: bool = True) -> Optional[str]:
         """
         Baixa arquivo do Firebase para cache local
         
         Args:
             remote_path: Caminho do arquivo no Firebase (ex: CONTROLE/arquivo.dwg)
             force: Forçar download mesmo se já existir no cache
+            verbose: Mostrar mensagens de progresso
         
         Returns:
-            Caminho local do arquivo ou None se falhar
+            Tupla (caminho_local, status) onde status é 'downloaded', 'cached' ou None se falhar
         """
         if not self.initialized:
             return None
@@ -165,20 +166,24 @@ class FirebaseSync:
                     # Comparar hash MD5
                     local_md5 = self._calculate_md5(local_file)
                     if local_md5 == blob.md5_hash:
-                        return str(local_file)
+                        # Arquivo já está atualizado no cache
+                        return (str(local_file), 'cached')
             
             # Download do arquivo
             blob = self.bucket.blob(remote_path)
             if not blob.exists():
-                print(f"❌ Arquivo não encontrado no Firebase: {remote_path}")
+                if verbose:
+                    print(f"❌ Arquivo não encontrado no Firebase: {remote_path}")
                 return None
             
             blob.download_to_filename(str(local_file))
-            print(f"✓ Download: {os.path.basename(remote_path)}")
-            return str(local_file)
+            if verbose:
+                print(f"⬇️ Baixado: {os.path.basename(remote_path)}")
+            return (str(local_file), 'downloaded')
             
         except Exception as e:
-            print(f"❌ Erro ao baixar {remote_path}: {e}")
+            if verbose:
+                print(f"❌ Erro ao baixar {remote_path}: {e}")
             return None
     
     def upload_file(self, local_path: str, remote_path: str = None) -> bool:
@@ -267,7 +272,7 @@ class FirebaseSync:
         
         return stats
     
-    def download_all(self, force: bool = False) -> int:
+    def download_all(self, force: bool = False) -> Dict[str, int]:
         """
         Baixa todos os arquivos DWG do Firebase para cache local
         
@@ -275,19 +280,36 @@ class FirebaseSync:
             force: Forçar download de todos (ignorar cache)
         
         Returns:
-            Número de arquivos baixados
+            Dicionário com estatísticas: {'downloaded': n, 'cached': n, 'failed': n}
         """
         arquivos = self.list_files()
-        count = 0
+        stats = {'downloaded': 0, 'cached': 0, 'failed': 0}
         
-        print(f"\n⬇️  Baixando {len(arquivos)} arquivos do Firebase...")
+        print(f"\n🔍 Verificando {len(arquivos)} arquivos...")
         
         for arquivo in arquivos:
-            if self.download_file(arquivo['caminho'], force):
-                count += 1
+            result = self.download_file(arquivo['caminho'], force, verbose=False)
+            if result:
+                path, status = result
+                if status == 'downloaded':
+                    stats['downloaded'] += 1
+                    print(f"  ⬇️ {arquivo['nome']}")
+                elif status == 'cached':
+                    stats['cached'] += 1
+            else:
+                stats['failed'] += 1
         
-        print(f"✓ {count} arquivos baixados/atualizados")
-        return count
+        # Mensagem resumida
+        print()
+        if stats['downloaded'] > 0:
+            print(f"✓ {stats['downloaded']} novos baixados, {stats['cached']} já estavam atualizados")
+        else:
+            print(f"✓ Todos os {stats['cached']} arquivos já estão atualizados no cache")
+        
+        if stats['failed'] > 0:
+            print(f"⚠ {stats['failed']} falharam")
+        
+        return stats
     
     def start_auto_sync(self, interval: int = 300):
         """
