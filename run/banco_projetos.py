@@ -185,9 +185,7 @@ class BuscaDWG:
         # Botões de ação
         ttk.Button(frame_acoes, text="📋 Copiar (Ctrl+C)", 
                    command=self.copiar_para_clipboard).pack(side=tk.LEFT, padx=3)
-        ttk.Button(frame_acoes, text="📁 Abrir Pasta", 
-                   command=self.abrir_pasta).pack(side=tk.LEFT, padx=3)
-        ttk.Button(frame_acoes, text="🔄 Atualizar", 
+        ttk.Button(frame_acoes, text=" Atualizar", 
                    command=self.atualizar_lista).pack(side=tk.LEFT, padx=3)
         
         # Contador de resultados
@@ -503,26 +501,6 @@ class BuscaDWG:
         except Exception as e:
             self.mostrar_status(f"✗ Erro: {str(e)[:50]}", "red")
     
-    def abrir_pasta(self):
-        """Abre a pasta do arquivo selecionado"""
-        arquivo = self.obter_arquivo_selecionado()
-        if not arquivo:
-            return
-        
-        caminho_arquivo = os.path.join(PASTA_DWGS, arquivo)
-        
-        try:
-            if sys.platform == "win32":
-                subprocess.run(['explorer', '/select,', caminho_arquivo])
-            elif sys.platform == "darwin":
-                subprocess.run(['open', '-R', caminho_arquivo])
-            else:
-                subprocess.run(['xdg-open', PASTA_DWGS])
-            
-            self.mostrar_status("📁 Pasta aberta", "green")
-        except Exception as e:
-            self.mostrar_status(f"✗ Erro: {str(e)[:40]}", "red")
-    
     def menu_contexto(self, event):
         """Mostra menu de contexto no clique direito"""
         item = self.tree.identify_row(event.y)
@@ -533,7 +511,6 @@ class BuscaDWG:
         
         menu = tk.Menu(self.root, tearoff=0)
         menu.add_command(label="📋 Copiar arquivo", command=self.copiar_para_clipboard)
-        menu.add_command(label="📁 Abrir pasta", command=self.abrir_pasta)
         menu.add_separator()
         menu.add_command(label="🔄 Atualizar lista", command=self.atualizar_lista)
         
