@@ -171,6 +171,9 @@ class FirebaseSync:
                 # Verificar se precisa atualizar
                 blob = self.bucket.blob(remote_path)
                 if blob.exists():
+                    # Recarregar propriedades do blob para obter o MD5
+                    blob.reload()
+                    
                     # Comparar hash MD5
                     local_md5 = self._calculate_md5(local_file)
                     remote_md5 = blob.md5_hash
