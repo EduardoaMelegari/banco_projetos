@@ -159,8 +159,15 @@ class FirebaseSync:
             # Definir caminho local
             local_file = self.cache_dir / os.path.basename(remote_path)
             
+            # Debug: mostrar informações do cache
+            print(f"DEBUG: Verificando {os.path.basename(remote_path)}")
+            print(f"  Cache: {local_file}")
+            print(f"  Existe: {local_file.exists()}")
+            print(f"  Force: {force}")
+            
             # Verificar se já existe no cache
             if local_file.exists() and not force:
+                print(f"  → Arquivo existe no cache, verificando MD5...")
                 # Verificar se precisa atualizar
                 blob = self.bucket.blob(remote_path)
                 if blob.exists():
@@ -168,13 +175,18 @@ class FirebaseSync:
                     local_md5 = self._calculate_md5(local_file)
                     remote_md5 = blob.md5_hash
                     
-                    # Debug: remover após teste
-                    if verbose:
-                        print(f"DEBUG {os.path.basename(remote_path)}: local={local_md5[:20]}... remote={remote_md5[:20] if remote_md5 else 'None'}...")
+                    print(f"  → Local MD5:  {local_md5}")
+                    print(f"  → Remote MD5: {remote_md5}")
+                    print(f"  → Iguais: {local_md5 == remote_md5}")
                     
                     if local_md5 == remote_md5:
                         # Arquivo já está atualizado no cache
+                        print(f"  ✓ Usando cache")
                         return (str(local_file), 'cached')
+                    else:
+                        print(f"  ⬇️ MD5 diferente, baixando novamente...")
+            else:
+                print(f"  → Arquivo não existe no cache ou force=True")
             
             # Download do arquivo
             blob = self.bucket.blob(remote_path)
