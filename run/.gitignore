@@ -23,6 +23,10 @@ __pycache__/
 dist/
 build/
 
+# PyInstaller
+*.spec
+BancoProjetosDWG_Portable/
+
 # IDEs
 .vscode/
 .idea/
