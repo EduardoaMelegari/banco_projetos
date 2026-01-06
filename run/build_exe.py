@@ -63,9 +63,20 @@ def criar_executavel():
         '--hidden-import=firebase_admin',
         '--hidden-import=google.cloud',
         '--hidden-import=dotenv',
+        '--upx-dir=upx',  # Usar UPX para compressão (se disponível)
         '--noconfirm',
         'banco_projetos.py'
     ]
+    
+    # Verificar se UPX está disponível
+    try:
+        subprocess.run(['upx', '--version'], capture_output=True, check=True)
+        print("✓ UPX encontrado - executável será compactado\n")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("⚠️ UPX não encontrado - executável não será compactado")
+        print("  Baixe em: https://upx.github.io/\n")
+        # Remover opção --upx-dir se UPX não estiver disponível
+        comando = [c for c in comando if not c.startswith('--upx-dir')]
     
     try:
         result = subprocess.run(comando, check=True)
@@ -187,7 +198,13 @@ SYNC_INTERVAL=300
      → Execute pelo CMD para ver erros
      → Verifique antivírus (pode bloquear .exe)
 
-📞 SUPORTE:
+� SOBRE O EXECUTÁVEL:
+
+  • Tamanho compactado com UPX (~30-40% menor)
+  • Baixe UPX em: https://upx.github.io/
+  • Todas as dependências incluídas (Firebase, Python, etc.)
+
+�📞 SUPORTE:
 
   Repositório: https://github.com/EduardoaMelegari/banco_projetos
   Firebase: https://console.firebase.google.com/
