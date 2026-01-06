@@ -354,12 +354,14 @@ class FirebaseSync:
                 time.sleep(1)
     
     def _calculate_md5(self, file_path: str) -> str:
-        """Calcula hash MD5 de um arquivo"""
+        """Calcula hash MD5 de um arquivo no formato base64 (compatível com Firebase)"""
+        import base64
         hash_md5 = hashlib.md5()
         with open(file_path, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
-        return hash_md5.hexdigest()
+        # Retornar em base64 para comparar com Firebase
+        return base64.b64encode(hash_md5.digest()).decode('utf-8')
     
     def get_cache_path(self, filename: str) -> str:
         """Retorna caminho no cache para um arquivo"""
