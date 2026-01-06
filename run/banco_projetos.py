@@ -8,6 +8,7 @@ import subprocess
 import sys
 import json
 import re
+import threading
 
 # Importações específicas do Windows (só carrega se estiver no Windows)
 if sys.platform == "win32":
@@ -20,6 +21,14 @@ if sys.platform == "win32":
 else:
     HAS_WIN32 = False
 
+# Importar módulo Firebase Sync
+try:
+    from firebase_sync import FirebaseSync
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
+    print("⚠️ Firebase não disponível. Usando modo local.")
+
 # ======= CONFIGURAÇÕES =======
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "app_config.json")
@@ -30,7 +39,9 @@ DEFAULT_CONFIG = {
     "pasta_dwgs_windows": r"C:\Projetos Solturi\assinatura\CONTROLE",
     "tema": "clam",
     "mostrar_todos_ao_iniciar": True,
-    "nome_arquivo_copia": "PROJETO.dwg"
+    "nome_arquivo_copia": "PROJETO.dwg",
+    "usar_firebase": True,  # Usar Firebase Storage por padrão
+    "sincronizar_ao_iniciar": True
 }
 
 def carregar_config():
@@ -64,9 +75,9 @@ if not os.path.exists(PASTA_DWGS):
 class BuscaDWG:
     def __init__(self, root):
         self.root = root
-        self.root.title("🔍 Banco de Projetos DWG")
-        self.root.geometry("750x500")
-        self.root.minsize(600, 400)
+        self.root.title("🔍 Banco de Projetos DWG - Firebase Cloud")
+        self.root.geometry("850x550")
+        self.root.minsize(650, 450)
         
         # Configurar tema
         self.style = ttk.Style()
@@ -78,6 +89,12 @@ class BuscaDWG:
         # Variáveis
         self.arquivos_cache = []
         self.ordem_atual = {"coluna": None, "reverso": False}
+        self.firebase_sync = None
+        self.usando_firebase = False
+        
+        # Inicializar Firebase se configurado
+        if CONFIG.get("usar_firebase", True) and FIREBASE_AVAILABLE:
+            self.inicializar_firebase()
         
         # Configurar interface
         self.criar_interface()
@@ -92,6 +109,32 @@ class BuscaDWG:
         
         # Focar no campo de busca
         self.entrada.focus_set()
+    
+    def inicializar_firebase(self):
+        """Inicializa conexão com Firebase"""
+        try:
+            self.firebase_sync = FirebaseSync()
+            self.usando_firebase = True
+            
+            # Sincronizar ao iniciar se configurado
+            if CONFIG.get("sincronizar_ao_iniciar", True):
+                self.mostrar_status("🔄 Sincronizando com Firebase...", "blue")
+                
+                # Fazer sync em thread separada para não travar a UI
+                def sync_thread():
+                    try:
+                        self.firebase_sync.download_all()
+                        self.root.after(0, lambda: self.mostrar_status("✓ Sincronizado com Firebase", "green"))
+                        self.root.after(0, self.atualizar_lista)
+                    except Exception as e:
+                        self.root.after(0, lambda: self.mostrar_status(f"⚠ Erro sync: {str(e)[:30]}", "orange"))
+                
+                threading.Thread(target=sync_thread, daemon=True).start()
+            
+        except Exception as e:
+            self.mostrar_status(f"⚠ Firebase offline: {str(e)[:40]}", "orange")
+            self.usando_firebase = False
+            print(f"Firebase não inicializado: {e}")
     
     def criar_interface(self):
         """Cria toda a interface gráfica"""
@@ -197,9 +240,27 @@ class BuscaDWG:
         self.root.bind("<Return>", self.copiar_para_clipboard)
     
     def carregar_arquivos(self):
-        """Carrega lista de arquivos DWG da pasta"""
+        """Carrega lista de arquivos DWG da pasta ou Firebase"""
         self.arquivos_cache = []
         
+        # Verificar se está usando Firebase
+        if self.usando_firebase and self.firebase_sync:
+            try:
+                # Listar arquivos do Firebase
+                arquivos_firebase = self.firebase_sync.list_files()
+                
+                for arq_info in arquivos_firebase:
+                    info = self.extrair_info(arq_info['nome'])
+                    info['firebase'] = True
+                    info['caminho_remoto'] = arq_info['caminho']
+                    self.arquivos_cache.append(info)
+                
+                self.mostrar_status(f"✓ {len(self.arquivos_cache)} arquivos (Firebase Cloud)", "green")
+                return
+            except Exception as e:
+                self.mostrar_status(f"⚠ Erro Firebase, usando local: {str(e)[:30]}", "orange")
+        
+        # Modo local (fallback)
         if not os.path.exists(PASTA_DWGS):
             self.mostrar_status(f"⚠ Pasta não encontrada: {PASTA_DWGS}", "red")
             return
@@ -208,9 +269,10 @@ class BuscaDWG:
             for arquivo in os.listdir(PASTA_DWGS):
                 if arquivo.lower().endswith(".dwg") and not arquivo.endswith(".bak"):
                     info = self.extrair_info(arquivo)
+                    info['firebase'] = False
                     self.arquivos_cache.append(info)
             
-            self.mostrar_status(f"✓ {len(self.arquivos_cache)} arquivos carregados", "green")
+            self.mostrar_status(f"✓ {len(self.arquivos_cache)} arquivos carregados (Local)", "green")
         except Exception as e:
             self.mostrar_status(f"✗ Erro ao carregar: {e}", "red")
     
@@ -324,9 +386,26 @@ class BuscaDWG:
     
     def atualizar_lista(self):
         """Recarrega a lista de arquivos"""
+        if self.usando_firebase and self.firebase_sync:
+            self.mostrar_status("🔄 Sincronizando...", "blue")
+            
+            # Sincronizar em thread separada
+            def sync_and_reload():
+                try:
+                    self.firebase_sync.download_all()
+                    self.root.after(0, self._atualizar_interface)
+                except Exception as e:
+                    self.root.after(0, lambda: self.mostrar_status(f"✗ Erro: {str(e)[:30]}", "red"))
+            
+            threading.Thread(target=sync_and_reload, daemon=True).start()
+        else:
+            self._atualizar_interface()
+    
+    def _atualizar_interface(self):
+        """Atualiza interface após sincronização"""
         self.carregar_arquivos()
         self.buscar_arquivos()
-        self.mostrar_status("🔄 Lista atualizada", "blue")
+        self.mostrar_status("✓ Lista atualizada", "green")
     
     def mostrar_status(self, mensagem, cor="black"):
         """Mostra mensagem de status temporária"""
@@ -351,10 +430,26 @@ class BuscaDWG:
         if not arquivo:
             return
         
-        caminho_arquivo = os.path.join(PASTA_DWGS, arquivo)
         nome_copia = CONFIG.get("nome_arquivo_copia", "PROJETO.dwg")
         
         try:
+            # Verificar se é arquivo do Firebase
+            info_arquivo = next((info for info in self.arquivos_cache if info['arquivo'] == arquivo), None)
+            
+            if info_arquivo and info_arquivo.get('firebase', False):
+                # Baixar do Firebase se necessário
+                self.mostrar_status("⬇️ Baixando de Firebase...", "blue")
+                
+                caminho_local = self.firebase_sync.download_file(info_arquivo['caminho_remoto'])
+                if not caminho_local:
+                    self.mostrar_status("✗ Erro ao baixar arquivo", "red")
+                    return
+                
+                caminho_arquivo = caminho_local
+            else:
+                # Arquivo local
+                caminho_arquivo = os.path.join(PASTA_DWGS, arquivo)
+            
             # Copiar para pasta temporária
             pasta_temp = tempfile.gettempdir()
             destino = os.path.join(pasta_temp, nome_copia)

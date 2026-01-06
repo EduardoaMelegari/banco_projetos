@@ -1,0 +1,32 @@
+# Firebase credentials (NUNCA commitar!)
+firebase-credentials.json
+
+# Ambiente
+.env
+
+# Cache local
+cache/
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

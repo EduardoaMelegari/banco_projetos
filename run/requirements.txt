@@ -1,0 +1,20 @@
+# Dependências para Banco de Projetos DWG com Firebase
+#
+# Instalação:
+#   pip install -r requirements.txt
+#
+
+# Firebase Admin SDK para Python
+firebase-admin>=6.5.0
+
+# Gerenciamento de variáveis de ambiente
+python-dotenv>=1.0.0
+
+# Interface gráfica (Tkinter já vem com Python, mas listando para documentação)
+# tkinter - Built-in no Python
+
+# Windows clipboard support (apenas Windows)
+# pywin32>=306  # Descomente se estiver no Windows
+
+# Opcional: para melhor formatação de logs
+colorama>=0.4.6
