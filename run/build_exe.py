@@ -27,17 +27,25 @@ def limpar_build():
     """Limpa diretórios de build anteriores"""
     print("\n🧹 Limpando builds anteriores...")
     
-    dirs_to_remove = ['build', 'dist', '__pycache__']
+    dirs_to_remove = ['build', 'dist']
     for dir_name in dirs_to_remove:
         if os.path.exists(dir_name):
-            shutil.rmtree(dir_name)
-            print(f"  ✓ Removido: {dir_name}/")
+            try:
+                shutil.rmtree(dir_name)
+                print(f"  ✓ Removido: {dir_name}/")
+            except PermissionError:
+                print(f"  ⚠️ Não foi possível remover {dir_name}/ (permissão negada)")
+            except Exception as e:
+                print(f"  ⚠️ Erro ao remover {dir_name}/: {e}")
     
     # Remover arquivos .spec antigos
     for file in os.listdir('.'):
         if file.endswith('.spec'):
-            os.remove(file)
-            print(f"  ✓ Removido: {file}")
+            try:
+                os.remove(file)
+                print(f"  ✓ Removido: {file}")
+            except Exception as e:
+                print(f"  ⚠️ Erro ao remover {file}: {e}")
 
 
 def criar_executavel():
