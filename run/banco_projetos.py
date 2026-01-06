@@ -104,13 +104,13 @@ class BuscaDWG:
         self.firebase_sync = None
         self.usando_firebase = False
         
-        # Inicializar Firebase se configurado
-        if CONFIG.get("usar_firebase", True) and FIREBASE_AVAILABLE:
-            self.inicializar_firebase()
-        
-        # Configurar interface
+        # Configurar interface primeiro (para criar label_status)
         self.criar_interface()
         self.configurar_atalhos()
+        
+        # Inicializar Firebase se configurado (após interface criada)
+        if CONFIG.get("usar_firebase", True) and FIREBASE_AVAILABLE:
+            self.inicializar_firebase()
         
         # Carregar arquivos
         self.carregar_arquivos()
