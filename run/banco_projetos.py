@@ -137,7 +137,9 @@ class BuscaDWG:
                     try:
                         self.firebase_sync.download_all()
                         self.root.after(0, lambda: self.mostrar_status("✓ Sincronizado com Firebase", "green"))
-                        self.root.after(0, self.atualizar_lista)
+                        # Recarregar lista após sincronização (sem baixar novamente)
+                        self.root.after(0, self.carregar_arquivos)
+                        self.root.after(0, self.buscar_arquivos)
                     except Exception as e:
                         self.root.after(0, lambda: self.mostrar_status(f"⚠ Erro sync: {str(e)[:30]}", "orange"))
                 

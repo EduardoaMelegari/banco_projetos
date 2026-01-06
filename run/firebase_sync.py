@@ -133,7 +133,8 @@ class FirebaseSync:
                         'md5_hash': blob.md5_hash
                     })
             
-            return arquivos
+            # TESTE: Retornar apenas 1 arquivo para economizar banda
+            return arquivos[:1] if arquivos else []
             
         except Exception as e:
             print(f"❌ Erro ao listar arquivos: {e}")
@@ -165,7 +166,13 @@ class FirebaseSync:
                 if blob.exists():
                     # Comparar hash MD5
                     local_md5 = self._calculate_md5(local_file)
-                    if local_md5 == blob.md5_hash:
+                    remote_md5 = blob.md5_hash
+                    
+                    # Debug: remover após teste
+                    if verbose:
+                        print(f"DEBUG {os.path.basename(remote_path)}: local={local_md5[:20]}... remote={remote_md5[:20] if remote_md5 else 'None'}...")
+                    
+                    if local_md5 == remote_md5:
                         # Arquivo já está atualizado no cache
                         return (str(local_file), 'cached')
             
