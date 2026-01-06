@@ -4,6 +4,9 @@ firebase-credentials.json
 # Ambiente
 .env
 
+# Usuários e autenticação
+users.json
+
 # Cache local
 cache/
 *.tmp

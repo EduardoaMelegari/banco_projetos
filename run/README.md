@@ -18,7 +18,10 @@ pip install -r requirements.txt
 
 1. Menu lateral: **Storage** → **Começar**
 2. Modo teste → Próximo
-3. Localização: `southamerica-east1` → Concluído
+3. Configurar:
+   - **Local**: `us-central1` (sem custos financeiros) ✅
+   - **Frequência**: Standard
+4. Concluído
 
 ### 4. Baixar credenciais
 
@@ -36,10 +39,10 @@ cp .env.example .env
 Edite `.env` e adicione o nome do bucket:
 
 ```env
-FIREBASE_BUCKET=seu-projeto.appspot.com
+FIREBASE_BUCKET=banco-projetos-dwg.firebasestorage.app
 ```
 
-> **Onde achar o bucket?** Firebase Console > Storage > veja o nome (ex: `banco-projetos-dwg.appspot.com`)
+> **Onde achar o bucket?** Firebase Console > Storage > topo da página
 
 ### 6. Upload inicial dos DWGs
 
@@ -57,6 +60,23 @@ python sync_inicial.py
 python banco_projetos.py
 ```
 
+**🔐 Credenciais padrão:**
+- Usuário: `admin`
+- Senha: `admin`
+- **IMPORTANTE**: Altere após primeiro acesso!
+
+### 8. Gerenciar usuários
+
+```bash
+python manage_users.py
+```
+
+Permite:
+- Adicionar novos usuários
+- Alterar senhas
+- Listar usuários
+- Testar login
+
 ## ✅ Checklist de Configuração
 
 - [ ] Projeto Firebase criado
@@ -66,6 +86,7 @@ python banco_projetos.py
 - [ ] Dependências instaladas (`pip install -r requirements.txt`)
 - [ ] Upload inicial feito (`python sync_inicial.py`)
 - [ ] Aplicação funcionando (`python banco_projetos.py`)
+- [ ] **Senha padrão alterada** (`python manage_users.py`)
 
 ## 🔧 Configurações Avançadas
 

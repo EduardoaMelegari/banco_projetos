@@ -29,6 +29,14 @@ except ImportError:
     FIREBASE_AVAILABLE = False
     print("⚠️ Firebase não disponível. Usando modo local.")
 
+# Importar módulo de autenticação
+try:
+    from auth import AuthManager
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+    print("⚠️ Módulo de autenticação não disponível.")
+
 # ======= CONFIGURAÇÕES =======
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "app_config.json")
@@ -73,9 +81,13 @@ if not os.path.exists(PASTA_DWGS):
 # =============================
 
 class BuscaDWG:
-    def __init__(self, root):
+    def __init__(self, root, username=None):
         self.root = root
-        self.root.title("🔍 Banco de Projetos DWG - Firebase Cloud")
+        self.username = username
+        titulo = "🔍 Banco de Projetos DWG - Firebase Cloud"
+        if username:
+            titulo += f" [👤 {username}]"
+        self.root.title(titulo)
         self.root.geometry("850x550")
         self.root.minsize(650, 450)
         
@@ -521,10 +533,141 @@ class BuscaDWG:
             menu.grab_release()
 
 
+class LoginWindow:
+    """Janela de login para autenticação"""
+    
+    def __init__(self, root):
+        self.root = root
+        self.root.title("🔐 Login - Banco de Projetos DWG")
+        self.root.geometry("400x300")
+        self.root.resizable(False, False)
+        
+        # Centralizar janela
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() // 2) - (400 // 2)
+        y = (self.root.winfo_screenheight() // 2) - (300 // 2)
+        self.root.geometry(f"400x300+{x}+{y}")
+        
+        self.auth_manager = AuthManager()
+        self.authenticated = False
+        self.username = None
+        
+        self.criar_interface()
+        
+        # Focar no campo de usuário
+        self.entry_user.focus_set()
+    
+    def criar_interface(self):
+        """Cria interface de login"""
+        # Frame principal
+        main_frame = ttk.Frame(self.root, padding="30")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Título
+        titulo = ttk.Label(
+            main_frame,
+            text="🔍 Banco de Projetos DWG",
+            font=("Segoe UI", 16, "bold")
+        )
+        titulo.pack(pady=(0, 10))
+        
+        subtitulo = ttk.Label(
+            main_frame,
+            text="Autenticação Necessária",
+            font=("Segoe UI", 10)
+        )
+        subtitulo.pack(pady=(0, 30))
+        
+        # Frame de campos
+        campos_frame = ttk.Frame(main_frame)
+        campos_frame.pack(fill=tk.X, pady=10)
+        
+        # Usuário
+        ttk.Label(campos_frame, text="Usuário:", font=("Segoe UI", 10)).pack(anchor=tk.W)
+        self.entry_user = ttk.Entry(campos_frame, font=("Segoe UI", 11))
+        self.entry_user.pack(fill=tk.X, pady=(5, 15))
+        self.entry_user.bind("<Return>", lambda e: self.entry_pass.focus_set())
+        
+        # Senha
+        ttk.Label(campos_frame, text="Senha:", font=("Segoe UI", 10)).pack(anchor=tk.W)
+        self.entry_pass = ttk.Entry(campos_frame, font=("Segoe UI", 11), show="•")
+        self.entry_pass.pack(fill=tk.X, pady=(5, 20))
+        self.entry_pass.bind("<Return>", lambda e: self.fazer_login())
+        
+        # Botão de login
+        btn_login = ttk.Button(
+            campos_frame,
+            text="🔓 Entrar",
+            command=self.fazer_login
+        )
+        btn_login.pack(fill=tk.X, ipady=8)
+        
+        # Label de status
+        self.label_status = ttk.Label(
+            main_frame,
+            text="",
+            font=("Segoe UI", 9),
+            foreground="red"
+        )
+        self.label_status.pack(pady=(10, 0))
+        
+        # Rodapé com dica
+        rodape = ttk.Label(
+            main_frame,
+            text="Usuário padrão: admin / admin",
+            font=("Segoe UI", 8),
+            foreground="gray"
+        )
+        rodape.pack(side=tk.BOTTOM, pady=(20, 0))
+    
+    def fazer_login(self):
+        """Realiza autenticação"""
+        username = self.entry_user.get().strip()
+        password = self.entry_pass.get()
+        
+        if not username or not password:
+            self.mostrar_erro("Preencha usuário e senha")
+            return
+        
+        if self.auth_manager.authenticate(username, password):
+            self.authenticated = True
+            self.username = username
+            self.root.destroy()
+        else:
+            self.mostrar_erro("Usuário ou senha incorretos")
+            self.entry_pass.delete(0, tk.END)
+            self.entry_pass.focus_set()
+    
+    def mostrar_erro(self, mensagem):
+        """Mostra mensagem de erro"""
+        self.label_status.config(text=f"❌ {mensagem}")
+        self.root.after(3000, lambda: self.label_status.config(text=""))
+
+
 def main():
     """Função principal"""
+    # Verificar se autenticação está disponível
+    if not AUTH_AVAILABLE:
+        messagebox.showerror(
+            "Erro",
+            "Módulo de autenticação não disponível.\n"
+            "Verifique se o arquivo auth.py existe."
+        )
+        return
+    
+    # Janela de login
+    login_root = tk.Tk()
+    login_window = LoginWindow(login_root)
+    login_root.mainloop()
+    
+    # Verificar se foi autenticado
+    if not login_window.authenticated:
+        return
+    
+    # Abrir aplicação principal
+    username = login_window.username
     root = tk.Tk()
-    app = BuscaDWG(root)
+    app = BuscaDWG(root, username)
     root.mainloop()
 
 
