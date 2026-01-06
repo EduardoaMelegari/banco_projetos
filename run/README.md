@@ -61,6 +61,7 @@ python banco_projetos.py
 ```
 
 **🔐 Credenciais padrão:**
+
 - Usuário: `admin`
 - Senha: `admin`
 - **IMPORTANTE**: Altere após primeiro acesso!
@@ -72,6 +73,7 @@ python manage_users.py
 ```
 
 Permite:
+
 - Adicionar novos usuários
 - Alterar senhas
 - Listar usuários
