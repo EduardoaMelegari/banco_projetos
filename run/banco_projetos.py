@@ -44,7 +44,6 @@ CONFIG_FILE = os.path.join(SCRIPT_DIR, "app_config.json")
 # Configurações padrão
 DEFAULT_CONFIG = {
     "pasta_dwgs": os.path.join(os.path.dirname(SCRIPT_DIR), "CONTROLE"),
-    "pasta_dwgs_windows": r"C:\Projetos Solturi\assinatura\CONTROLE",
     "tema": "clam",
     "mostrar_todos_ao_iniciar": True,
     "nome_arquivo_copia": "PROJETO.dwg",
@@ -84,7 +83,7 @@ class BuscaDWG:
     def __init__(self, root, username=None):
         self.root = root
         self.username = username
-        titulo = "🔍 Banco de Projetos DWG - Firebase Cloud"
+        titulo = "Banco de Projetos"
         if username:
             titulo += f" [👤 {username}]"
         self.root.title(titulo)
@@ -527,7 +526,7 @@ class LoginWindow:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("🔐 Login - Banco de Projetos DWG")
+        self.root.title("Banco de Projetos - Login")
         self.root.geometry("400x300")
         self.root.resizable(False, False)
         
